@@ -59,7 +59,7 @@ public:
 // ExpAST
 class ExpAST : public BaseAST {
 public:
-  std::unique_ptr<BaseAST> unary;
+  std::unique_ptr<BaseAST> add_exp;
 
   void Dump() const override;
 };
@@ -101,6 +101,42 @@ public:
 class NumberAST : public BaseAST {
 public:
   int32_t val;
+
+  void Dump() const override;
+};
+
+// MulExp AST
+class MulExpAST : public BaseAST {
+public:
+  struct Unary {
+    std::unique_ptr<BaseAST> ptr;
+  };
+  struct Mul {
+    std::unique_ptr<BaseAST> mul_exp;
+    char op;
+    std::unique_ptr<BaseAST> unary_exp;
+  };
+  std::variant<Unary, Mul> data;
+
+  MulExpAST(std::variant<Unary, Mul> &&d) : data(std::move(d)) {}
+
+  void Dump() const override;
+};
+
+// AddExp AST
+class AddExpAST : public BaseAST {
+public:
+  struct Mul {
+    std::unique_ptr<BaseAST> ptr;
+  };
+  struct Add {
+    std::unique_ptr<BaseAST> add_exp;
+    char op;
+    std::unique_ptr<BaseAST> mul_exp;
+  };
+  std::variant<Mul, Add> data;
+
+  AddExpAST(std::variant<Mul, Add> &&d) : data(std::move(d)) {}
 
   void Dump() const override;
 };

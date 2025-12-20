@@ -34,4 +34,6 @@ private:
   void VisitPrimaryExp(const PrimaryExpAST *ast);
   void VisitUnaryExp(const UnaryExpAST *ast);
   void VisitNumber(const NumberAST *ast);
+  void VisitMulExp(const MulExpAST *ast);
+  void VisitAddExp(const BaseAST *ast);
 };

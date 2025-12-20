@@ -59,6 +59,10 @@ void IRGenerator::Visit(const BaseAST *ast) {
     VisitUnaryExp(unary);
   } else if (auto number = dynamic_cast<const NumberAST *>(ast)) {
     VisitNumber(number);
+  } else if (auto mulExp = dynamic_cast<const MulExpAST *>(ast)) {
+    VisitMulExp(mulExp);
+  } else if (auto addExp = dynamic_cast<const AddExpAST *>(ast)) {
+    VisitAddExp(addExp);
   } else {
     // Handle unknown AST node types if necessary
     assert(false);
@@ -101,7 +105,7 @@ void IRGenerator::VisitStmt(const StmtAST *ast) {
   buffer << "  ret " << last_val << std::endl;
 }
 
-void IRGenerator::VisitExp(const ExpAST *ast) { Visit(ast->unary.get()); }
+void IRGenerator::VisitExp(const ExpAST *ast) { Visit(ast->add_exp.get()); }
 
 void IRGenerator::VisitPrimaryExp(const PrimaryExpAST *ast) {
   if (std::holds_alternative<PrimaryExpAST::Number>(ast->data)) {
@@ -141,4 +145,51 @@ void IRGenerator::VisitUnaryExp(const UnaryExpAST *ast) {
 
 void IRGenerator::VisitNumber(const NumberAST *ast) {
   last_val = std::to_string(ast->val);
+}
+
+void IRGenerator::VisitMulExp(const MulExpAST *ast) {
+  if (std::holds_alternative<MulExpAST::Unary>(ast->data)) {
+    auto &unary = std::get<MulExpAST::Unary>(ast->data);
+    Visit(unary.ptr.get());
+  } else {
+    auto &mul = std::get<MulExpAST::Mul>(ast->data);
+    Visit(mul.mul_exp.get());
+    std::string left = last_val;
+    Visit(mul.unary_exp.get());
+    std::string right = last_val;
+
+    std::string dest = NewTempReg();
+    char op = mul.op;
+    if (op == '*') {
+      buffer << "  " << dest << " = mul " << left << ", " << right << std::endl;
+    } else if (op == '/') {
+      buffer << "  " << dest << " = div " << left << ", " << right << std::endl;
+    } else if (op == '%') {
+      buffer << "  " << dest << " = rem " << left << ", " << right << std::endl;
+    }
+    last_val = dest;
+  }
+}
+
+void IRGenerator::VisitAddExp(const BaseAST *ast) {
+  auto addExpAst = dynamic_cast<const AddExpAST *>(ast);
+  if (std::holds_alternative<AddExpAST::Mul>(addExpAst->data)) {
+    auto &mul = std::get<AddExpAST::Mul>(addExpAst->data);
+    Visit(mul.ptr.get());
+  } else {
+    auto &add = std::get<AddExpAST::Add>(addExpAst->data);
+    Visit(add.add_exp.get());
+    std::string left = last_val;
+    Visit(add.mul_exp.get());
+    std::string right = last_val;
+
+    std::string dest = NewTempReg();
+    char op = add.op;
+    if (op == '+') {
+      buffer << "  " << dest << " = add " << left << ", " << right << std::endl;
+    } else if (op == '-') {
+      buffer << "  " << dest << " = sub " << left << ", " << right << std::endl;
+    }
+    last_val = dest;
+  }
 }

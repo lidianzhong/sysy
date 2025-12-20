@@ -22,6 +22,7 @@ std::string AllocReg() {
 // 如果是已计算的值，则返回其寄存器
 std::string GetReg(koopa_raw_value_t val) {
   if (val->kind.tag == KOOPA_RVT_INTEGER) {
+    // 整数常量 0 直接使用x0寄存器
     int32_t int_val = val->kind.data.integer.value;
     if (int_val == 0) {
       return "x0";
@@ -110,14 +111,14 @@ void Visit(const koopa_raw_value_t &value) {
     std::string rhs = GetReg(binary.rhs);
 
     std::string rd = "";
-    
+
     // 如果有一个操作数是非零常量，结果寄存器可以直接使用另一个操作数的寄存器
-    if (binary.lhs->kind.tag == KOOPA_RVT_INTEGER &&
-        binary.lhs->kind.data.integer.value != 0) {
-      rd = lhs;
-    } else if (binary.rhs->kind.tag == KOOPA_RVT_INTEGER &&
-               binary.rhs->kind.data.integer.value != 0) {
+    if (binary.rhs->kind.tag == KOOPA_RVT_INTEGER &&
+        binary.rhs->kind.data.integer.value != 0) {
       rd = rhs;
+    } else if (binary.lhs->kind.tag == KOOPA_RVT_INTEGER &&
+               binary.lhs->kind.data.integer.value != 0) {
+      rd = lhs;
     }
 
     if (rd.empty()) {
@@ -127,49 +128,56 @@ void Visit(const koopa_raw_value_t &value) {
     val_regs[value] = rd;
 
     switch (binary.op) {
-    case KOOPA_RBO_EQ:
+    // Equal to
+    case KOOPA_RBO_EQ: {
       std::cout << "  xor " << rd << ", " << lhs << ", " << rhs << std::endl;
       std::cout << "  seqz " << rd << ", " << rd << std::endl;
       break;
-    case KOOPA_RBO_NOT_EQ:
-      std::cout << "  xor " << rd << ", " << lhs << ", " << rhs << std::endl;
-      std::cout << "  snez " << rd << ", " << rd << std::endl;
-      break;
-    case KOOPA_RBO_ADD:
+    }
+    // case KOOPA_RBO_NOT_EQ:
+    //   std::cout << "  xor " << rd << ", " << lhs << ", " << rhs << std::endl;
+    //   std::cout << "  snez " << rd << ", " << rd << std::endl;
+    //   break;
+    case KOOPA_RBO_ADD: {
       std::cout << "  add " << rd << ", " << lhs << ", " << rhs << std::endl;
       break;
-    case KOOPA_RBO_SUB:
+    }
+    // Subtraction
+    case KOOPA_RBO_SUB: {
       std::cout << "  sub " << rd << ", " << lhs << ", " << rhs << std::endl;
       break;
-    case KOOPA_RBO_MUL:
+    }
+    case KOOPA_RBO_MUL: {
       std::cout << "  mul " << rd << ", " << lhs << ", " << rhs << std::endl;
       break;
-    case KOOPA_RBO_DIV:
-      std::cout << "  div " << rd << ", " << lhs << ", " << rhs << std::endl;
-      break;
-    case KOOPA_RBO_MOD:
-      std::cout << "  rem " << rd << ", " << lhs << ", " << rhs << std::endl;
-      break;
-    case KOOPA_RBO_AND:
-      std::cout << "  and " << rd << ", " << lhs << ", " << rhs << std::endl;
-      break;
-    case KOOPA_RBO_OR:
-      std::cout << "  or " << rd << ", " << lhs << ", " << rhs << std::endl;
-      break;
-    case KOOPA_RBO_LT:
-      std::cout << "  slt " << rd << ", " << lhs << ", " << rhs << std::endl;
-      break;
-    case KOOPA_RBO_GT:
-      std::cout << "  slt " << rd << ", " << rhs << ", " << lhs << std::endl;
-      break;
-    case KOOPA_RBO_LE:
-      std::cout << "  slt " << rd << ", " << rhs << ", " << lhs << std::endl;
-      std::cout << "  seqz " << rd << ", " << rd << std::endl;
-      break;
-    case KOOPA_RBO_GE:
-      std::cout << "  slt " << rd << ", " << lhs << ", " << rhs << std::endl;
-      std::cout << "  seqz " << rd << ", " << rd << std::endl;
-      break;
+    }
+
+    // case KOOPA_RBO_DIV:
+    //   std::cout << "  div " << rd << ", " << lhs << ", " << rhs << std::endl;
+    //   break;
+    // case KOOPA_RBO_MOD:
+    //   std::cout << "  rem " << rd << ", " << lhs << ", " << rhs << std::endl;
+    //   break;
+    // case KOOPA_RBO_AND:
+    //   std::cout << "  and " << rd << ", " << lhs << ", " << rhs << std::endl;
+    //   break;
+    // case KOOPA_RBO_OR:
+    //   std::cout << "  or " << rd << ", " << lhs << ", " << rhs << std::endl;
+    //   break;
+    // case KOOPA_RBO_LT:
+    //   std::cout << "  slt " << rd << ", " << lhs << ", " << rhs << std::endl;
+    //   break;
+    // case KOOPA_RBO_GT:
+    //   std::cout << "  slt " << rd << ", " << rhs << ", " << lhs << std::endl;
+    //   break;
+    // case KOOPA_RBO_LE:
+    //   std::cout << "  slt " << rd << ", " << rhs << ", " << lhs << std::endl;
+    //   std::cout << "  seqz " << rd << ", " << rd << std::endl;
+    //   break;
+    // case KOOPA_RBO_GE:
+    //   std::cout << "  slt " << rd << ", " << lhs << ", " << rhs << std::endl;
+    //   std::cout << "  seqz " << rd << ", " << rd << std::endl;
+    //   break;
     default:
       std::cerr << "Unsupported binary operation: " << binary.op << std::endl;
       assert(false);
