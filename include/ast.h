@@ -1,209 +1,149 @@
 #pragma once
 
+#include "visitor.h"
 #include <cstdint>
 #include <iostream>
 #include <memory>
 #include <string>
 #include <variant>
+#include <vector>
 
-// AST 的基类
+/// AST 基类
 class BaseAST {
 public:
   virtual ~BaseAST() = default;
-
-  virtual void Dump(int indent = 0) const = 0;
+  virtual void Accept(ASTVisitor &visitor) = 0;
 };
 
-// FuncType AST
-class FuncTypeAST : public BaseAST {
-public:
-  std::string name;
+///
+/// 程序结构
+///
 
-  void Dump(int indent = 0) const override;
-};
-
-// CompUnit AST
+/// 编译单元
 class CompUnitAST : public BaseAST {
 public:
   std::unique_ptr<BaseAST> func_def;
-
-  void Dump(int indent = 0) const override;
+  void Accept(ASTVisitor &visitor) override;
 };
 
-// FuncDef AST
+/// 函数定义
 class FuncDefAST : public BaseAST {
 public:
-  std::unique_ptr<BaseAST> func_type;
+  std::string ret_type;
   std::string ident;
   std::unique_ptr<BaseAST> block;
 
-  void Dump(int indent = 0) const override;
+  void Accept(ASTVisitor &visitor) override;
 };
 
-// Block AST
+/// 代码块
 class BlockAST : public BaseAST {
 public:
-  std::unique_ptr<BaseAST> stmt;
-
-  void Dump(int indent = 0) const override;
+  std::vector<std::unique_ptr<BaseAST>> items; // Decl or Stmt
+  void Accept(ASTVisitor &visitor) override;
 };
 
-// Stmt AST
-class StmtAST : public BaseAST {
+///
+/// 声明相关
+///
+
+/// 常量声明
+class ConstDeclAST : public BaseAST {
+public:
+  std::string btype;
+  std::vector<std::unique_ptr<BaseAST>> const_defs;
+  void Accept(ASTVisitor &visitor) override;
+};
+
+/// 常量定义
+class ConstDefAST : public BaseAST {
+public:
+  std::string ident;
+  std::unique_ptr<BaseAST> init_val;
+  void Accept(ASTVisitor &visitor) override;
+};
+
+/// 变量声明
+class VarDeclAST : public BaseAST {
+public:
+  std::string btype; // "int"
+  std::vector<std::unique_ptr<BaseAST>> var_defs;
+  void Accept(ASTVisitor &visitor) override;
+};
+
+/// 变量定义
+class VarDefAST : public BaseAST {
+public:
+  std::string ident;
+  std::unique_ptr<BaseAST> init_val; // 可能为空
+  void Accept(ASTVisitor &visitor) override;
+};
+
+///
+/// 语句相关
+///
+
+/// 赋值语句: LVal '=' Exp ';'
+class AssignStmtAST : public BaseAST {
+public:
+  std::unique_ptr<BaseAST> lval;
+  std::unique_ptr<BaseAST> exp;
+  void Accept(ASTVisitor &visitor) override;
+};
+
+/// 返回语句: "return Exp ";"
+class ReturnStmtAST : public BaseAST {
 public:
   std::unique_ptr<BaseAST> exp;
-
-  void Dump(int indent = 0) const override;
+  void Accept(ASTVisitor &visitor) override;
 };
 
-// ExpAST
-class ExpAST : public BaseAST {
+/// 左值
+class LValAST : public BaseAST {
 public:
-  std::unique_ptr<BaseAST> lor_exp;
-
-  void Dump(int indent = 0) const override;
+  std::string ident;
+  void Accept(ASTVisitor &visitor) override;
 };
 
-// PrimaryExp AST
-class PrimaryExpAST : public BaseAST {
-public:
-  struct Exp {
-    std::unique_ptr<BaseAST> ptr;
-  };
-  struct Number {
-    int32_t val;
-  };
-  std::variant<Exp, Number> data;
+///
+/// 表达式相关
+///
 
-  PrimaryExpAST(std::variant<Exp, Number> &&d) : data(std::move(d)) {}
-
-  void Dump(int indent = 0) const override;
-};
-
-// UnaryExp AST
-class UnaryExpAST : public BaseAST {
-public:
-  struct Primary {
-    std::unique_ptr<BaseAST> ptr;
-  };
-  struct Unary {
-    char op;
-    std::unique_ptr<BaseAST> ptr;
-  };
-  std::variant<Primary, Unary> data;
-
-  UnaryExpAST(std::variant<Primary, Unary> &&d) : data(std::move(d)) {}
-
-  void Dump(int indent = 0) const override;
-};
-
-// Number AST
+/// 数字字面量
 class NumberAST : public BaseAST {
 public:
   int32_t val;
-
-  void Dump(int indent = 0) const override;
+  void Accept(ASTVisitor &visitor) override;
 };
 
-// MulExp AST
-class MulExpAST : public BaseAST {
+/// 一元表达式
+class UnaryExpAST : public BaseAST {
 public:
-  struct Unary {
-    std::unique_ptr<BaseAST> ptr;
-  };
-  struct Mul {
-    std::unique_ptr<BaseAST> mul_exp;
-    char op;
-    std::unique_ptr<BaseAST> unary_exp;
-  };
-  std::variant<Unary, Mul> data;
-
-  MulExpAST(std::variant<Unary, Mul> &&d) : data(std::move(d)) {}
-
-  void Dump(int indent = 0) const override;
+  std::string op; // "+", "-", "!"
+  std::unique_ptr<BaseAST> exp;
+  void Accept(ASTVisitor &visitor) override;
 };
 
-// AddExp AST
-class AddExpAST : public BaseAST {
+/// 二元表达式
+class BinaryExpAST : public BaseAST {
 public:
-  struct Mul {
-    std::unique_ptr<BaseAST> ptr;
-  };
-  struct Add {
-    std::unique_ptr<BaseAST> add_exp;
-    char op;
-    std::unique_ptr<BaseAST> mul_exp;
-  };
-  std::variant<Mul, Add> data;
-
-  AddExpAST(std::variant<Mul, Add> &&d) : data(std::move(d)) {}
-
-  void Dump(int indent = 0) const override;
+  std::string op; // "+", "-", "*", "/", "%", "<", ">", "<=", ">=", "==", "!=",
+                  // "&&", "||"
+  std::unique_ptr<BaseAST> lhs;
+  std::unique_ptr<BaseAST> rhs;
+  void Accept(ASTVisitor &visitor) override;
 };
 
-// RelExp AST
-class RelExpAST : public BaseAST {
-public:
-  struct Add {
-    std::unique_ptr<BaseAST> ptr;
-  };
-  struct Rel {
-    std::unique_ptr<BaseAST> rel_exp;
-    std::string op;
-    std::unique_ptr<BaseAST> add_exp;
-  };
-  std::variant<Add, Rel> data;
-
-  RelExpAST(std::variant<Add, Rel> &&d) : data(std::move(d)) {}
-
-  void Dump(int indent = 0) const override;
-};
-
-// EqExp AST
-class EqExpAST : public BaseAST {
-public:
-  struct Rel {
-    std::unique_ptr<BaseAST> ptr;
-  };
-  struct Eq {
-    std::unique_ptr<BaseAST> eq_exp;
-    std::string op;
-    std::unique_ptr<BaseAST> rel_exp;
-  };
-  std::variant<Rel, Eq> data;
-
-  EqExpAST(std::variant<Rel, Eq> &&d) : data(std::move(d)) {}
-  void Dump(int indent = 0) const override;
-};
-
-// LAndExp AST
-class LAndExpAST : public BaseAST {
-public:
-  struct Eq {
-    std::unique_ptr<BaseAST> ptr;
-  };
-  struct LAnd {
-    std::unique_ptr<BaseAST> land_exp;
-    std::unique_ptr<BaseAST> eq_exp;
-  };
-  std::variant<Eq, LAnd> data;
-
-  LAndExpAST(std::variant<Eq, LAnd> &&d) : data(std::move(d)) {}
-  void Dump(int indent = 0) const override;
-};
-
-// LOrExp AST
-class LOrExpAST : public BaseAST {
-public:
-  struct LAnd {
-    std::unique_ptr<BaseAST> ptr;
-  };
-  struct LOr {
-    std::unique_ptr<BaseAST> lor_exp;
-    std::unique_ptr<BaseAST> land_exp;
-  };
-  std::variant<LAnd, LOr> data;
-
-  LOrExpAST(std::variant<LAnd, LOr> &&d) : data(std::move(d)) {}
-  void Dump(int indent = 0) const override;
-};
+inline void CompUnitAST::Accept(ASTVisitor &visitor) { visitor.Visit(*this); }
+inline void FuncDefAST::Accept(ASTVisitor &visitor) { visitor.Visit(*this); }
+inline void BlockAST::Accept(ASTVisitor &visitor) { visitor.Visit(*this); }
+inline void ConstDeclAST::Accept(ASTVisitor &visitor) { visitor.Visit(*this); }
+inline void ConstDefAST::Accept(ASTVisitor &visitor) { visitor.Visit(*this); }
+inline void VarDeclAST::Accept(ASTVisitor &visitor) { visitor.Visit(*this); }
+inline void VarDefAST::Accept(ASTVisitor &visitor) { visitor.Visit(*this); }
+inline void AssignStmtAST::Accept(ASTVisitor &visitor) { visitor.Visit(*this); }
+inline void ReturnStmtAST::Accept(ASTVisitor &visitor) { visitor.Visit(*this); }
+inline void LValAST::Accept(ASTVisitor &visitor) { visitor.Visit(*this); }
+inline void NumberAST::Accept(ASTVisitor &visitor) { visitor.Visit(*this); }
+inline void UnaryExpAST::Accept(ASTVisitor &visitor) { visitor.Visit(*this); }
+inline void BinaryExpAST::Accept(ASTVisitor &visitor) { visitor.Visit(*this); }

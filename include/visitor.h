@@ -1,0 +1,34 @@
+#pragma once
+
+class CompUnitAST;
+class FuncDefAST;
+class BlockAST;
+class ConstDeclAST;
+class ConstDefAST;
+class VarDeclAST;
+class VarDefAST;
+class AssignStmtAST;
+class ReturnStmtAST;
+class LValAST;
+class NumberAST;
+class UnaryExpAST;
+class BinaryExpAST;
+
+class ASTVisitor {
+public:
+  virtual ~ASTVisitor() = default;
+
+  virtual void Visit(CompUnitAST &node) = 0;
+  virtual void Visit(FuncDefAST &node) = 0;
+  virtual void Visit(BlockAST &node) = 0;
+  virtual void Visit(ConstDeclAST &node) = 0;
+  virtual void Visit(ConstDefAST &node) = 0;
+  virtual void Visit(VarDeclAST &node) = 0;
+  virtual void Visit(VarDefAST &node) = 0;
+  virtual void Visit(AssignStmtAST &node) = 0;
+  virtual void Visit(ReturnStmtAST &node) = 0;
+  virtual void Visit(LValAST &node) = 0;
+  virtual void Visit(NumberAST &node) = 0;
+  virtual void Visit(UnaryExpAST &node) = 0;
+  virtual void Visit(BinaryExpAST &node) = 0;
+};

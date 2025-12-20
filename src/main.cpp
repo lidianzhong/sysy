@@ -7,11 +7,14 @@
 #include <string>
 
 #include "ast.h"
-#include "codegen/riscv.h"
-#include "irgen/ir_gen.h"
+#include "backend/irgen.h"
+#include "backend/riscvgen.h"
 #include "koopa.h"
+#include "utils/dump_visitor.h"
 
 using namespace std;
+
+class DumpVisitor;
 
 // 声明 lexer 的输入, 以及 parser 函数
 // 为什么不引用 sysy.tab.hpp 呢? 因为首先里面没有 yyin 的定义
@@ -33,33 +36,33 @@ int main(int argc, const char *argv[]) {
     return 1;
   }
 
-  // 1. 打开输入文件
+  // open source file
   yyin = fopen(input, "r");
   assert(yyin);
 
-  // 2. 解析 AST
+  // parse
   unique_ptr<BaseAST> ast;
   auto parse_ret = yyparse(ast);
   assert(!parse_ret);
 
-  // 3. 生成 IR
-  IRGenerator ir_gen;
-  ir_gen.Visit(ast.get());
+  // print AST
+  // DumpVisitor dumper;
+  // ast->Accept(dumper);
+
+  // AST -> Koopa IR
+  IRGenVisitor ir_gen;
+  ast->Accept(ir_gen);
   std::string ir = ir_gen.GetIR();
 
-  if (mode == "-koopa") {
+  // Koopa IR -> RISC-V
+  koopa_raw_program_t raw = ir_gen.GetProgram();
+
+  if (std::string(mode) == "-koopa") {
     FILE *out = fopen(output, "w");
     assert(out);
     fprintf(out, "%s", ir.c_str());
     fclose(out);
-    return 0;
-  }
-
-  // 4. 获取 raw program
-  koopa_raw_program_t raw = ir_gen.GetProgram();
-
-  // 处理 raw program
-  if (mode == "-riscv") {
+  } else if (std::string(mode) == "-riscv") {
     freopen(output, "w", stdout);
     Visit(raw);
     fclose(stdout);

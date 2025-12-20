@@ -3,7 +3,7 @@
 #include <map>
 #include <string>
 
-#include "codegen/riscv.h"
+#include "riscvgen.h"
 
 // 寄存器分配状态
 // 使用 map 记录每个 Value 对应的寄存器

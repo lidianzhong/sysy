@@ -45,8 +45,10 @@ Hexadecimal   0[xX][0-9a-fA-F]+
                   exit(1);
                 }
 
+"const"         { return CONST; }
 "int"           { return INT; }
 "return"        { return RETURN; }
+
 "<="            { return LE; }
 ">="            { return GE; }
 "=="            { return EQ; }
