@@ -2,6 +2,10 @@
 
 #include "ast.h"
 #include "irgen.h"
+#include "utils/symbol_table.h"
+
+IRGenVisitor::IRGenVisitor(const SymbolTable &symbol_table)
+    : symbol_table_(symbol_table) {}
 
 std::string IRGenVisitor::GetIR() { return buffer_.str(); }
 
@@ -55,11 +59,9 @@ void IRGenVisitor::VisitConstDecl_(const ConstDeclAST *ast) {
 }
 
 void IRGenVisitor::VisitConstDef_(const ConstDefAST *ast) {
-  // 常量定义：计算初始值
-  if (ast->init_val) {
-    ast->init_val->Accept(*this);
-  }
-  // TODO: 存储常量值（如果需要）
+  // 常量定义：在编译期已经由 ConstEvalVisitor 处理并存入符号表
+  // 这里不需要生成 IR，因为常量在编译期已经求值完成
+  // 如果 init_val 中包含常量引用，会在 VisitLVal_ 中从符号表查询
 }
 
 void IRGenVisitor::VisitVarDecl_(const VarDeclAST *ast) {
@@ -105,8 +107,15 @@ void IRGenVisitor::VisitReturnStmt_(const ReturnStmtAST *ast) {
 }
 
 void IRGenVisitor::VisitLVal_(const LValAST *ast) {
-  // LVal 返回变量名（用于后续使用）
-  last_val_ = ast->ident;
+  // 先检查是否是常量
+  if (symbol_table_.Contains(ast->ident)) {
+    // 是常量：直接返回常量值（作为立即数）
+    int32_t const_val = symbol_table_.GetValue(ast->ident);
+    last_val_ = std::to_string(const_val);
+  } else {
+    // 是变量：返回变量名（用于后续使用）
+    last_val_ = ast->ident;
+  }
 }
 
 void IRGenVisitor::VisitNumber_(const NumberAST *ast) {

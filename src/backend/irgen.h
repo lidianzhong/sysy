@@ -6,8 +6,12 @@
 #include "koopa.h"
 #include "visitor.h"
 
+class SymbolTable;
+
 class IRGenVisitor : public ASTVisitor {
 public:
+  explicit IRGenVisitor(const SymbolTable &symbol_table);
+
   void Visit(CompUnitAST &node) override;
   void Visit(FuncDefAST &node) override;
   void Visit(BlockAST &node) override;
@@ -29,6 +33,7 @@ private:
   std::stringstream buffer_;
   std::string last_val_;
   int temp_reg_id_ = 0;
+  const SymbolTable &symbol_table_;
 
   std::string NewTempReg_();
 

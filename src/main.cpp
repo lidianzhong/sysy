@@ -10,6 +10,7 @@
 #include "backend/irgen.h"
 #include "backend/riscvgen.h"
 #include "koopa.h"
+#include "utils/const_eval_visitor.h"
 #include "utils/dump_visitor.h"
 
 using namespace std;
@@ -46,11 +47,15 @@ int main(int argc, const char *argv[]) {
   assert(!parse_ret);
 
   // print AST
-  // DumpVisitor dumper;
-  // ast->Accept(dumper);
+  DumpVisitor dumper;
+  ast->Accept(dumper);
+
+  // constant evaluation:
+  ConstEvalVisitor const_eval;
+  ast->Accept(const_eval);
 
   // AST -> Koopa IR
-  IRGenVisitor ir_gen;
+  IRGenVisitor ir_gen(const_eval.GetSymbolTable());
   ast->Accept(ir_gen);
   std::string ir = ir_gen.GetIR();
 
