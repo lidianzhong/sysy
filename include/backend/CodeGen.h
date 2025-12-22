@@ -1,0 +1,38 @@
+#pragma once
+
+#include "FrameInfo.h"
+#include "koopa.h"
+#include <map>
+#include <string>
+
+class ProgramCodeGen {
+public:
+  ProgramCodeGen() = default;
+  ~ProgramCodeGen() = default;
+
+  void Emit(const koopa_raw_program_t &program);
+
+  void EmitTextSection();
+};
+
+class FunctionCodeGen {
+public:
+  FunctionCodeGen() = default;
+  ~FunctionCodeGen() = default;
+
+  void Emit(const koopa_raw_function_t &func);
+
+private:
+  void EmitPrologue();
+  void EmitEpilogue();
+  void EmitSlice(const koopa_raw_slice_t &slice);
+  void EmitBasicBlock(const koopa_raw_basic_block_t &bb);
+  void EmitValue(const koopa_raw_value_t &value);
+
+  void AllocateStackSpace();
+
+  size_t GetStackOffset(koopa_raw_value_t val);
+
+  koopa_raw_function_t func_;
+  FrameInfo stack_frame_;
+};

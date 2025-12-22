@@ -1,16 +1,24 @@
 #pragma once
 
+#include <memory>
 #include <sstream>
 #include <string>
 
 #include "koopa.h"
-#include "visitor.h"
 
-class SymbolTable;
+#include "ASTVisitor.h"
+#include "SymbolTable.h"
+#include "ir/IRBuilder.h"
 
 class IRGenVisitor : public ASTVisitor {
 public:
-  explicit IRGenVisitor(const SymbolTable &symbol_table);
+  explicit IRGenVisitor(SymbolTable &symtab);
+
+  // 获取 IR 文本（用于 -koopa 模式）
+  std::string GetIR() const;
+
+  // 获取 raw program（用于 -riscv 模式）
+  koopa_raw_program_t GetProgram() const;
 
   void Visit(CompUnitAST &node) override;
   void Visit(FuncDefAST &node) override;
@@ -26,16 +34,10 @@ public:
   void Visit(UnaryExpAST &node) override;
   void Visit(BinaryExpAST &node) override;
 
-  std::string GetIR();
-  koopa_raw_program_t GetProgram();
-
 private:
-  std::stringstream buffer_;
+  SymbolTable &symtab_;
+  std::unique_ptr<IRBuilder> builder_;
   std::string last_val_;
-  int temp_reg_id_ = 0;
-  const SymbolTable &symbol_table_;
-
-  std::string NewTempReg_();
 
   void VisitCompUnit_(const CompUnitAST *ast);
   void VisitFuncDef_(const FuncDefAST *ast);

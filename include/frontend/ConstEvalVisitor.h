@@ -2,13 +2,16 @@
 
 #include <optional>
 
-#include "symbol_table.h"
-#include "visitor.h"
+#include "ASTVisitor.h"
+#include "SymbolTable.h"
 
 class BaseAST;
+class SymbolTable;
 
 class ConstEvalVisitor : public ASTVisitor {
 public:
+  explicit ConstEvalVisitor(SymbolTable &symtab);
+
   void Visit(CompUnitAST &node) override;
   void Visit(FuncDefAST &node) override;
   void Visit(BlockAST &node) override;
@@ -23,9 +26,6 @@ public:
   void Visit(UnaryExpAST &node) override;
   void Visit(BinaryExpAST &node) override;
 
-  const SymbolTable &GetSymbolTable() const { return symbol_table_; }
-  SymbolTable &GetSymbolTable() { return symbol_table_; }
-
 private:
   void VisitConstDef_(const ConstDefAST &node);
   void VisitLVal_(const LValAST &node);
@@ -34,6 +34,6 @@ private:
   void VisitBinaryExp_(const BinaryExpAST &node);
 
 private:
-  SymbolTable symbol_table_;
-  std::optional<int32_t> last_val_ = 0;
+  SymbolTable &symtab_;
+  std::optional<int32_t> last_val_;
 };

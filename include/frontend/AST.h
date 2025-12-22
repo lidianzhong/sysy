@@ -1,12 +1,13 @@
 #pragma once
 
-#include "visitor.h"
 #include <cstdint>
 #include <iostream>
 #include <memory>
 #include <string>
 #include <variant>
 #include <vector>
+
+#include "ASTVisitor.h"
 
 /// AST 基类
 class BaseAST {

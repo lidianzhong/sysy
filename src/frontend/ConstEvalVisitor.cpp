@@ -4,8 +4,12 @@
 #include <optional>
 #include <stdexcept>
 
-#include "ast.h"
-#include "const_eval_visitor.h"
+#include "frontend/ConstEvalVisitor.h"
+
+#include "frontend/AST.h"
+#include "frontend/SymbolTable.h"
+
+ConstEvalVisitor::ConstEvalVisitor(SymbolTable &symtab) : symtab_(symtab) {}
 
 void ConstEvalVisitor::VisitConstDef_(const ConstDefAST &node) {
   if (node.init_val) {
@@ -14,14 +18,16 @@ void ConstEvalVisitor::VisitConstDef_(const ConstDefAST &node) {
 
     // 将常量加入符号表
     int32_t value = last_val_.value();
-    symbol_table_.Insert(node.ident, value);
+    symtab_.DefineConst(node.ident, value);
   }
 }
 
 void ConstEvalVisitor::VisitLVal_(const LValAST &node) {
-  // 从符号表中获取常量值
-  assert(symbol_table_.Contains(node.ident));
-  last_val_ = symbol_table_.GetValue(node.ident);
+  if (symtab_.IsConstant(node.ident)) {
+    last_val_ = symtab_.LookupConst(node.ident).value();
+  } else {
+    last_val_ = std::nullopt; // 非常量，不求值
+  }
 }
 
 void ConstEvalVisitor::VisitNumber_(const NumberAST &node) {

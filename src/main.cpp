@@ -2,20 +2,17 @@
 #include <cstddef>
 #include <cstdio>
 #include <iostream>
-#include <memory>
 #include <sstream>
 #include <string>
 
-#include "ast.h"
-#include "backend/irgen.h"
-#include "backend/riscvgen.h"
-#include "koopa.h"
-#include "utils/const_eval_visitor.h"
-#include "utils/dump_visitor.h"
+#include "backend/CodeGen.h"
+#include "frontend/AST.h"
+#include "frontend/ConstEvalVisitor.h"
+#include "frontend/DumpVisitor.h"
+#include "frontend/IRGenVisitor.h"
+#include "frontend/SymbolTable.h"
 
 using namespace std;
-
-class DumpVisitor;
 
 // 声明 lexer 的输入, 以及 parser 函数
 // 为什么不引用 sysy.tab.hpp 呢? 因为首先里面没有 yyin 的定义
@@ -45,31 +42,35 @@ int main(int argc, const char *argv[]) {
   unique_ptr<BaseAST> ast;
   auto parse_ret = yyparse(ast);
   assert(!parse_ret);
+  fclose(yyin);
 
-  // print AST
+  // dump AST
   DumpVisitor dumper;
   ast->Accept(dumper);
 
-  // constant evaluation:
-  ConstEvalVisitor const_eval;
-  ast->Accept(const_eval);
+  SymbolTable symtab;
+
+  // constant evaluation
+  ConstEvalVisitor cev(symtab);
+  ast->Accept(cev);
 
   // AST -> Koopa IR
-  IRGenVisitor ir_gen(const_eval.GetSymbolTable());
-  ast->Accept(ir_gen);
-  std::string ir = ir_gen.GetIR();
+  IRGenVisitor irgen(symtab);
+  ast->Accept(irgen);
 
-  // Koopa IR -> RISC-V
-  koopa_raw_program_t raw = ir_gen.GetProgram();
-
-  if (std::string(mode) == "-koopa") {
+  // Code generation
+  if (mode == "-koopa") {
+    // 生成 Koopa IR 文本
     FILE *out = fopen(output, "w");
     assert(out);
+    std::string ir = irgen.GetIR();
     fprintf(out, "%s", ir.c_str());
     fclose(out);
-  } else if (std::string(mode) == "-riscv") {
+  } else if (mode == "-riscv") {
+    // 生成 RISC-V 汇编
     freopen(output, "w", stdout);
-    Visit(raw);
+    ProgramCodeGen codegen;
+    codegen.Emit(irgen.GetProgram());
     fclose(stdout);
   }
 
